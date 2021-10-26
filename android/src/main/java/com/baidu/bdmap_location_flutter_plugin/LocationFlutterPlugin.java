@@ -3,6 +3,8 @@ package com.baidu.bdmap_location_flutter_plugin;
 import android.content.Context;
 import android.text.TextUtils;
 
+import androidx.annotation.NonNull;
+
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDNotifyListener;
@@ -16,18 +18,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 /**
  * FlutterBaiduMapLocationPlugin
  */
 
-public class LocationFlutterPlugin implements MethodCallHandler, EventChannel.StreamHandler {
+public class LocationFlutterPlugin implements FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler {
 
     private static final String CHANNEL_METHOD_LOCATION = "bdmap_location_flutter_plugin";
     private static final String CHANNEL_STREAM_LOCATION = "bdmap_location_flutter_plugin_stream";
@@ -41,30 +44,29 @@ public class LocationFlutterPlugin implements MethodCallHandler, EventChannel.St
     private boolean isInChina = false;
     private boolean isNotify = false;
 
-    LocationFlutterPlugin(Context context) {
-        mContext = context;
-    }
+    private static MethodChannel methodChannel;
+    private static EventChannel eventChannel;
 
-    /**
-     * 注册组件
-     */
-    public static void registerWith(Registrar registrar) {
-        LocationFlutterPlugin plugin = new LocationFlutterPlugin(registrar.context());
-        /**
-         * 开始、停止定位
-         */
-        final MethodChannel channel = new MethodChannel(registrar.messenger(), CHANNEL_METHOD_LOCATION);
-        channel.setMethodCallHandler(plugin);
+    @Override
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+        methodChannel = new MethodChannel(binding.getBinaryMessenger(), CHANNEL_METHOD_LOCATION);
+        methodChannel.setMethodCallHandler(this);
 
-        /**
-         * 监听位置变化
-         */
-        final EventChannel eventChannel = new EventChannel(registrar.messenger(), CHANNEL_STREAM_LOCATION);
-        eventChannel.setStreamHandler(plugin);
+        eventChannel = new EventChannel(binding.getBinaryMessenger(), CHANNEL_STREAM_LOCATION);
+        eventChannel.setStreamHandler(this);
+        mContext = binding.getApplicationContext();
     }
 
     @Override
-    public void onMethodCall(MethodCall call, Result result) {
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        methodChannel.setMethodCallHandler(null);
+        eventChannel.setStreamHandler(null);
+        mContext = null;
+    }
+
+
+    @Override
+    public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
         if ("startLocation".equals(call.method)) {
             startLocation(); // 启动定位
         } else if ("stopLocation".equals(call.method)) {
